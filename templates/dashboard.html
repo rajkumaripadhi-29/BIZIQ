@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BizIQ Dashboard — {{ filename }}</title>
+  <meta name="description" content="Business intelligence dashboard for {{ filename }}" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+<!-- Animated Background Orbs -->
+<div class="bg-gradient-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<!-- Navbar -->
+<nav class="navbar-custom">
+  <div class="container d-flex align-items-center justify-content-between">
+    <a class="brand-logo" href="/">
+      <div class="brand-icon">📊</div>
+      <span class="brand-text">BizIQ</span>
+    </a>
+    <div class="d-flex align-items-center gap-3">
+      <span style="color:var(--text-secondary);font-size:0.82rem;">📄 {{ filename }}</span>
+      <a href="/" class="btn-outline-custom">← Upload New File</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Stats Strip ──────────────────────────────────────────── -->
+<div class="container mt-4">
+  <div class="row g-3">
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(67,97,238,0.15);">📋</div>
+        <div>
+          <div class="stat-label">Total Rows</div>
+          <div class="stat-value">{{ "{:,}".format(shape[0]) }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(76,201,240,0.12);">📐</div>
+        <div>
+          <div class="stat-label">Columns</div>
+          <div class="stat-value">{{ shape[1] }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(63,185,80,0.12);">📈</div>
+        <div>
+          <div class="stat-label">Charts Generated</div>
+          <div class="stat-value">{{ charts | length }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(247,37,133,0.12);">💡</div>
+        <div>
+          <div class="stat-label">Insights Found</div>
+          <div class="stat-value">{{ insights | length }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Column Type Detection ───────────────────────────────── -->
+<div class="container mt-4">
+  <div class="glass-card p-4">
+    <div class="section-header">
+      <div class="section-pill"></div>
+      <h2 class="section-title">Detected Column Types</h2>
+    </div>
+    <div class="d-flex flex-wrap gap-1">
+      {% for col in col_types.numeric %}
+        <span class="col-tag col-numeric" title="Numeric">🔢 {{ col }}</span>
+      {% endfor %}
+      {% for col in col_types.categorical %}
+        <span class="col-tag col-category" title="Categorical">🏷 {{ col }}</span>
+      {% endfor %}
+      {% for col in col_types.datetime %}
+        <span class="col-tag col-datetime" title="Date/Time">📅 {{ col }}</span>
+      {% endfor %}
+    </div>
+    <div class="mt-3" style="font-size:0.78rem;color:var(--text-secondary);">
+      <span class="col-tag col-numeric">🔢 Numeric</span>&nbsp;
+      <span class="col-tag col-category">🏷 Categorical</span>&nbsp;
+      <span class="col-tag col-datetime">📅 Date / Time</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Data Preview ────────────────────────────────────────── -->
+<div class="container mt-4">
+  <div class="glass-card p-4">
+    <div class="section-header">
+      <div class="section-pill"></div>
+      <h2 class="section-title">Dataset Preview</h2>
+      <span class="section-count">First 8 rows</span>
+    </div>
+    <div class="preview-table-wrap">
+      <table class="preview-table">
+        <thead>
+          <tr>
+            {% if preview %}
+              {% for col in preview[0].keys() %}
+              <th>{{ col }}</th>
+              {% endfor %}
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in preview %}
+          <tr>
+            {% for val in row.values() %}
+            <td>{{ val if val is not none else '—' }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Business Insights ───────────────────────────────────── -->
+<div class="container mt-4">
+  <div class="glass-card p-4">
+    <div class="section-header">
+      <div class="section-pill"></div>
+      <h2 class="section-title">Business Insights</h2>
+      <span class="section-count">{{ insights | length }} found</span>
+    </div>
+    {% if insights %}
+    <div class="d-flex flex-column gap-2">
+      {% for insight in insights %}
+      <div class="insight-card">{{ insight | safe }}</div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:var(--text-secondary);font-size:0.9rem;">No actionable insights detected for this dataset.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Manual Graph Builder ────────────────────────────────────────── -->
+<div class="container mt-4">
+  <div class="glass-card p-4" id="custom-chart-builder">
+    <div class="section-header">
+      <div class="section-pill"></div>
+      <h2 class="section-title">🎨 Custom Chart Builder</h2>
+      <span class="section-count">Manual Selection</span>
+    </div>
+    <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:20px;">
+      Choose any two columns and a chart type to instantly visualize your data your way.
+    </p>
+
+    <div class="row g-3 align-items-end">
+      <!-- X-axis -->
+      <div class="col-12 col-md-3">
+        <label class="builder-label" for="x-axis-select">📌 X-Axis Column</label>
+        <select class="builder-select" id="x-axis-select">
+          <option value="">— Select column —</option>
+          {% for col in all_columns %}
+          <option value="{{ col }}">{{ col }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Y-axis -->
+      <div class="col-12 col-md-3">
+        <label class="builder-label" for="y-axis-select">📍 Y-Axis Column</label>
+        <select class="builder-select" id="y-axis-select">
+          <option value="">— Select column —</option>
+          {% for col in all_columns %}
+          <option value="{{ col }}">{{ col }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Chart Type -->
+      <div class="col-12 col-md-3">
+        <label class="builder-label" for="chart-type-select">📊 Chart Type</label>
+        <select class="builder-select" id="chart-type-select">
+          <option value="bar">📊 Bar Chart</option>
+          <option value="line">📈 Line Chart</option>
+          <option value="scatter">⚡ Scatter Plot</option>
+          <option value="pie">🥧 Pie Chart</option>
+        </select>
+      </div>
+
+      <!-- Generate Button -->
+      <div class="col-12 col-md-3">
+        <button class="btn-primary-custom w-100" id="generate-custom-chart-btn"
+                style="padding:11px 20px;font-size:0.9rem;">
+          ✨ Generate Chart
+        </button>
+      </div>
+    </div>
+
+    <!-- Validation / Error message -->
+    <div id="builder-error" class="builder-error-box" role="alert" style="display:none;"></div>
+
+    <!-- Custom chart output -->
+    <div id="custom-chart-output" style="display:none;margin-top:24px;">
+      <div class="builder-output-header">
+        <span id="custom-chart-title" class="builder-output-title"></span>
+        <span id="custom-chart-badge" class="chart-type-badge"></span>
+      </div>
+      <div id="custom-chart-description" class="chart-description" style="margin-bottom:10px;"></div>
+      <div id="custom-chart-plot" style="width:100%;height:380px;"></div>
+    </div>
+
+    <!-- Spinner while loading -->
+    <div id="builder-spinner" style="display:none;text-align:center;padding:32px 0;">
+      <div class="spinner" style="margin:0 auto;"></div>
+      <p style="color:var(--text-secondary);margin-top:14px;font-size:0.88rem;">Generating chart…</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Charts ──────────────────────────────────────────────── -->
+<div class="container mt-4 mb-5" id="charts-section">
+  <div class="section-header mb-4">
+    <div class="section-pill"></div>
+    <h2 class="section-title">Business Visualizations</h2>
+    <span class="section-count">{{ charts | length }} charts</span>
+  </div>
+
+  {% if charts %}
+  <div class="row g-4">
+    {% for chart in charts %}
+    <div class="col-lg-6">
+      <div class="chart-card">
+        <div class="chart-title">
+          {{ chart.title }}
+          <span class="chart-type-badge badge-{{ chart.chart_type }}">{{ chart.chart_type | upper }}</span>
+        </div>
+        {% if chart.description %}
+        <div class="chart-description">{{ chart.description }}</div>
+        {% endif %}
+        <div id="chart-{{ loop.index0 }}" style="width:100%;height:340px;"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="glass-card p-5 text-center" style="color:var(--text-secondary);">
+    <span style="font-size:3rem;">📉</span>
+    <p class="mt-3">No business-relevant visualizations could be auto-generated for this dataset.<br>
+    Try uploading a dataset with numeric, categorical, or date columns.</p>
+    <a href="/" class="btn-primary-custom mt-2">Upload Another File</a>
+  </div>
+  {% endif %}
+</div>
+
+<footer>
+  <div class="container">BizIQ — Intelligent Business Analytics Dashboard &nbsp;·&nbsp; Built with Flask &amp; Plotly</div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<script>
+  // Inject charts data from Flask → JS
+  const chartsData = {{ charts | tojson | safe }};
+</script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  // Render all Plotly charts
+  renderCharts(chartsData);
+</script>
+</body>
+</html>
